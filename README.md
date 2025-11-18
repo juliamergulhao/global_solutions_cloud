@@ -1,2 +1,2 @@
-# global_solutions_cloud
-WebApp
+# displaycsv
+Deploy com Azure WebApp
