@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IA & Mercado de Trabalho — Visualização</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    body { padding: 24px; background:#fff8fb; color:#222; }
+    header { margin-bottom:18px; }
+    .brand { font-weight:700; color:#b3477e; }
+    table { font-size:0.95rem; }
+    thead th { background:#fde8f1; }
+    .container { max-width:1200px; margin:auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="mb-3">
+      <h1 class="brand">IA & Mercado de Trabalho — Emprego/Desemprego</h1>
+      <p class="text-muted">Fonte: OECD (dataset carregado no repositório)</p>
+    </header>
+
+    <div class="mb-3">
+      <label class="form-label">Pesquisar:</label>
+      <input id="search" class="form-control" placeholder="Digite termo para filtrar (ocupação, setor, marca...)" />
+    </div>
+
+    <div id="table-area" class="table-responsive">
+      <table id="csv-table" class="table table-bordered table-striped table-sm">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <footer class="mt-4 text-muted small">
+      Developed for Global Solutions — Cloud Solutions. CSV: <code>data/emprego_desemprego.csv</code>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    // URL RAW do seu CSV (já no repositório)
+    const CSV_URL = "https://raw.githubusercontent.com/juliamergulhao/global_solutions_cloud/refs/heads/main/data/emprego_desemprego.csv";
+
+    function renderTable(data) {
+      const thead = document.getElementById('thead');
+      const tbody = document.getElementById('tbody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10">Nenhum dado</td></tr>';
+        return;
+      }
+
+      // cabeçalho (primeiro objeto)
+      const keys = Object.keys(data[0]);
+      const trh = document.createElement('tr');
+      keys.forEach(k => {
+        const th = document.createElement('th');
+        th.textContent = k;
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+
+      // linhas
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        keys.forEach(k => {
+          const td = document.createElement('td');
+          td.textContent = row[k] ?? '';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function loadCSV() {
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        encoding: "ISO-8859-1", // tenta latin1/ISO caso seja export da OECD
+        skipEmptyLines: true,
+        complete: function(results) {
+          // results.data é array de objetos
+          window._csvData = results.data;
+          renderTable(window._csvData);
+        },
+        error: function(err) {
+          // tenta utf-8 com separador ,
+          Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            encoding: "UTF-8",
+            skipEmptyLines: true,
+            complete: function(r2) {
+              window._csvData = r2.data;
+              renderTable(window._csvData);
+            },
+            error: function(e){ document.getElementById('tbody').innerHTML='<tr><td colspan="10">Erro ao carregar CSV: '+e.message+'</td></tr>'; }
+          });
+        }
+      });
+    }
+
+    // search filter
+    document.addEventListener('input', function(e){
+      if (e.target.id !== 'search') return;
+      const q = e.target.value.trim().toLowerCase();
+      if (!window._csvData) return;
+      if (!q) { renderTable(window._csvData); return; }
+      const filtered = window._csvData.filter(row => {
+        return Object.values(row).some(v => String(v || '').toLowerCase().includes(q));
+      });
+      renderTable(filtered);
+    });
+
+    loadCSV();
+  </script>
+</body>
+</html>
